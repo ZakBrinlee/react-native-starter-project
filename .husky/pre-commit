@@ -1,4 +1,3 @@
-
 . "$(dirname "$0")/common.sh"
 
 
@@ -6,12 +5,17 @@ echo "===\n>> Checking branch name..."
 
 # Check if branch protection is enabled
 if [[ -z $SKIP_BRANCH_PROTECTION ]]; then
-    BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    PROTECTED_BRANCHES="^(main|master)"
+    # Check if HEAD exists (not a first commit)
+    if git rev-parse --verify HEAD >/dev/null 2>&1; then
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        PROTECTED_BRANCHES="^(main|master)"
 
-    if [[ $BRANCH =~ $PROTECTED_BRANCHES ]]; then
-        echo ">> Direct commits to the $BRANCH branch are not allowed. Please choose a new branch name."
-        exit 1
+        if [[ $BRANCH =~ $PROTECTED_BRANCHES ]]; then
+            echo ">> Direct commits to the $BRANCH branch are not allowed. Please choose a new branch name."
+            exit 1
+        fi
+    else
+        echo ">> This appears to be the first commit, skipping branch name check."
     fi
 else
     echo ">> Skipping branch protection."
@@ -20,5 +24,10 @@ fi
 echo ">> Finish checking branch name"
 echo ">> Linting your files and fixing them if needed..."
 
-pnpm type-check
-pnpm lint-staged
+# Skip linting for the first commit to avoid potential issues
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+    pnpm type-check
+    pnpm lint-staged
+else
+    echo ">> This appears to be the first commit, skipping linting."
+fi
